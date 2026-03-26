@@ -199,11 +199,10 @@ async function handleApprove(body, ack, itemType, count) {
   try {
     await mhp.applyDiscount(req.inId, req.inOrderId, discountItemId, count);
     const msg = `✅ *${req.plateNumber}* 주차권 발급 완료!\n• 권종: ${itemName}\n• 발급자: <@${actorId}>`;
-    await app.client.chat.update({
+    await app.client.chat.postMessage({
       channel: body.channel.id,
-      ts: body.message.ts,
+      thread_ts: body.message.ts,
       text: msg,
-      blocks: [{ type: 'section', text: { type: 'mrkdwn', text: msg } }],
     });
     await app.client.chat.postMessage({
       channel: req.requesterId,
@@ -212,6 +211,7 @@ async function handleApprove(body, ack, itemType, count) {
   } catch (e) {
     await app.client.chat.postMessage({
       channel: body.channel.id,
+      thread_ts: body.message.ts,
       text: `❌ 발급 실패: ${e.response?.data?.resultMessage || e.message}`,
     });
   }
@@ -228,11 +228,10 @@ app.action(/^reject_/, async ({ body, ack }) => {
   const req = pending.get(reqId);
   if (!req) return;
   pending.delete(reqId);
-  await app.client.chat.update({
+  await app.client.chat.postMessage({
     channel: body.channel.id,
-    ts: body.message.ts,
+    thread_ts: body.message.ts,
     text: `❌ 거절됨 (${req.plateNumber}) — <@${body.user.id}>`,
-    blocks: [],
   });
   await app.client.chat.postMessage({
     channel: req.requesterId,
