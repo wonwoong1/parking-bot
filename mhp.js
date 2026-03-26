@@ -1,0 +1,63 @@
+const axios = require('axios');
+require('dotenv').config();
+
+const BASE = process.env.MHP_GATEWAY;
+const SITE = process.env.MHP_SITE_ID;
+
+let _token = null;
+let _tokenExpiry = 0;
+
+async function getToken() {
+  if (_token && Date.now() < _tokenExpiry) return _token;
+  const res = await axios.post(`${BASE}/auth`, {
+    account: process.env.MHP_EMAIL,
+    password: process.env.MHP_PASSWORD,
+  }, { headers: { actor: 'mhp.console' } });
+  _token = res.data.data.accessToken;
+  _tokenExpiry = Date.now() + 55 * 60 * 1000;
+  return _token;
+}
+
+function headers(token) {
+  return { Authorization: `Bearer ${token}`, actor: 'mhp.console', Accept: 'application/json' };
+}
+
+async function searchVehicle(plate4) {
+  const token = await getToken();
+  const now = Date.now();
+  const res = await axios.get(`${BASE}/o.traffic/${SITE}`, {
+    headers: headers(token),
+    params: {
+      sortBy: 'inTime,DESC',
+      searchType: 'plateNumber4',
+      plateNumber: plate4,
+      inTimeGTE: now - 24 * 60 * 60 * 1000,
+      inTimeLTE: now,
+      rows: 5,
+    },
+  });
+  const content = res.data?.data?.content;
+  if (!content || content.length === 0) return null;
+  return content[0];
+}
+
+async function applyDiscount(inId, inOrderId, discountItemId, applyCount = 1) {
+  const token = await getToken();
+  const res = await axios.put(
+    `${BASE}/stores.discountItems.use/${SITE}/${discountItemId}`,
+    { inId, inOrderId, applyCount, memo: '' },
+    { headers: headers(token) }
+  );
+  return res.data;
+}
+
+function pickDiscountItem(inTimeMs) {
+  const mins = Math.floor((Date.now() - inTimeMs) / 60000);
+  if (mins < 60) {
+    return { id: process.env.MHP_DISCOUNT_ITEM_SHORT, name: '1시간 중복X(유료)', isLong: false };
+  } else {
+    return { id: process.env.MHP_DISCOUNT_ITEM_LONG, name: '1시간 유료(중복)', isLong: true };
+  }
+}
+
+module.exports = { searchVehicle, applyDiscount, pickDiscountItem };
