@@ -32,10 +32,10 @@ async function searchVehicle(plate4) {
   const res = await axios.get(`${BASE}/o.traffic/${SITE}`, {
     headers: headers(token),
     params: {
-      sortBy: 'inTime,DESC',
-      searchType: 'plateNumber4',
+      sortBy: 'inTime-1',
+      searchType: 'NOT_OUT',
       plateNumber: plate4,
-      rows: 5,
+      rows: 20,
     },
   });
   console.log('[MHP] searchVehicle response:', JSON.stringify(res.data, null, 2));
