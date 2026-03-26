@@ -31,8 +31,6 @@ async function searchVehicle(plate4) {
       sortBy: 'inTime,DESC',
       searchType: 'plateNumber4',
       plateNumber: plate4,
-      inTimeGTE: now - 24 * 60 * 60 * 1000,
-      inTimeLTE: now,
       rows: 5,
     },
   });
