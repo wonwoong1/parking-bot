@@ -152,23 +152,6 @@ app.view('parking_request', async ({ ack, body, view, client }) => {
           value: reqId,
         })),
       },
-      { type: 'divider' },
-      {
-        type: 'actions',
-        elements: [{
-          type: 'button',
-          text: { type: 'plain_text', text: '❌ 거절' },
-          style: 'danger',
-          action_id: `reject_${reqId}`,
-          value: reqId,
-          confirm: {
-            title: { type: 'plain_text', text: '거절 확인' },
-            text: { type: 'mrkdwn', text: `*${vehicle.plateNumber}* 발급 요청을 거절할까요?` },
-            confirm: { type: 'plain_text', text: '거절' },
-            deny: { type: 'plain_text', text: '취소' },
-          },
-        }],
-      },
     ],
   });
 
@@ -213,18 +196,6 @@ app.action(/^approve_short_/, async ({ body, ack }) => handleApprove(body, ack, 
 app.action(/^approve_long_(\d+)_/, async ({ body, ack, action }) => {
   const count = parseInt(action.action_id.split('_')[2]);
   handleApprove(body, ack, 'long', count);
-});
-app.action(/^reject_/, async ({ body, ack }) => {
-  await ack();
-  const reqId = body.actions[0].value;
-  const req = pending.get(reqId);
-  if (!req) return;
-  pending.delete(reqId);
-  await app.client.chat.postMessage({
-    channel: body.channel.id,
-    thread_ts: body.message.ts,
-    text: `❌ 거절됨 (${req.plateNumber}) — <@${body.user.id}>`,
-  });
 });
 
 (async () => {
