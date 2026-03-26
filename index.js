@@ -172,10 +172,6 @@ app.view('parking_request', async ({ ack, body, view, client }) => {
     ],
   });
 
-  await client.chat.postMessage({
-    channel: user_id,
-    text: `✅ *${vehicle.plateNumber}* 주차권 발급 요청이 접수됐습니다. 승인자 확인 후 발급됩니다.`,
-  });
 });
 
 async function handleApprove(body, ack, itemType, count) {
@@ -204,10 +200,6 @@ async function handleApprove(body, ack, itemType, count) {
       thread_ts: body.message.ts,
       text: msg,
     });
-    await app.client.chat.postMessage({
-      channel: req.requesterId,
-      text: `✅ 주차권이 발급됐습니다!\n차량: *${req.plateNumber}*\n권종: ${itemName}`,
-    });
   } catch (e) {
     await app.client.chat.postMessage({
       channel: body.channel.id,
@@ -232,10 +224,6 @@ app.action(/^reject_/, async ({ body, ack }) => {
     channel: body.channel.id,
     thread_ts: body.message.ts,
     text: `❌ 거절됨 (${req.plateNumber}) — <@${body.user.id}>`,
-  });
-  await app.client.chat.postMessage({
-    channel: req.requesterId,
-    text: `❌ *${req.plateNumber}* 주차권 발급 요청이 거절됐습니다.`,
   });
 });
 
