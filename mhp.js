@@ -9,11 +9,13 @@ let _tokenExpiry = 0;
 
 async function getToken() {
   if (_token && Date.now() < _tokenExpiry) return _token;
-  const res = await axios.post(`${BASE}/auth`, {
-    grant_type: 'password',
-    account: process.env.MHP_EMAIL,
-    password: process.env.MHP_PASSWORD,
-  }, { headers: { actor: 'mhp.console' } });
+  const params = new URLSearchParams();
+  params.append('grant_type', 'password');
+  params.append('account', process.env.MHP_EMAIL);
+  params.append('password', process.env.MHP_PASSWORD);
+  const res = await axios.post(`${BASE}/auth`, params, {
+    headers: { actor: 'mhp.console', 'Content-Type': 'application/x-www-form-urlencoded' }
+  });
   _token = res.data.data.accessToken;
   _tokenExpiry = Date.now() + 55 * 60 * 1000;
   return _token;
