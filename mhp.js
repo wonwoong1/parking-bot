@@ -17,8 +17,7 @@ async function getToken() {
   const res = await axios.post(`${BASE}/auth`, form, {
     headers: { actor: 'mhp.console', ...form.getHeaders() }
   });
-  console.log('[MHP] auth response:', JSON.stringify(res.data));
-  _token = res.data.data.accessToken;
+  _token = res.data.access_token;
   _tokenExpiry = Date.now() + 55 * 60 * 1000;
   return _token;
 }
