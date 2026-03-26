@@ -1,4 +1,5 @@
 const axios = require('axios');
+const FormData = require('form-data');
 require('dotenv').config();
 
 const BASE = process.env.MHP_GATEWAY;
@@ -9,12 +10,12 @@ let _tokenExpiry = 0;
 
 async function getToken() {
   if (_token && Date.now() < _tokenExpiry) return _token;
-  const params = new URLSearchParams();
-  params.append('grant_type', 'password');
-  params.append('account', process.env.MHP_EMAIL);
-  params.append('password', process.env.MHP_PASSWORD);
-  const res = await axios.post(`${BASE}/auth`, params, {
-    headers: { actor: 'mhp.console', 'Content-Type': 'application/x-www-form-urlencoded' }
+  const form = new FormData();
+  form.append('grant_type', 'password');
+  form.append('username', process.env.MHP_EMAIL);
+  form.append('password', process.env.MHP_PASSWORD);
+  const res = await axios.post(`${BASE}/auth`, form, {
+    headers: { actor: 'mhp.console', ...form.getHeaders() }
   });
   _token = res.data.data.accessToken;
   _tokenExpiry = Date.now() + 55 * 60 * 1000;
