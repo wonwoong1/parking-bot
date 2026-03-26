@@ -34,6 +34,7 @@ async function searchVehicle(plate4) {
       rows: 5,
     },
   });
+  console.log('[MHP] searchVehicle response:', JSON.stringify(res.data, null, 2));
   const content = res.data?.data?.content;
   if (!content || content.length === 0) return null;
   return content[0];

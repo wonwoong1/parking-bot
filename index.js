@@ -25,7 +25,7 @@ app.command('/parking', async ({ command, ack, respond }) => {
 
   await respond({ text: `🔍 *${plateInput}* 조회 중...` });
 
-  const vehicle = await mhp.searchVehicle(plate4).catch(() => null);
+  const vehicle = await mhp.searchVehicle(plate4).catch((e) => { console.error('[MHP] searchVehicle error:', e.response?.data || e.message); return null; });
   if (!vehicle) {
     await respond({ text: `❌ *${plateInput}* 차량이 현재 주차장에 없습니다.` });
     return;
