@@ -72,7 +72,7 @@ app.command('/parking', async ({ command, ack, respond }) => {
         accessory: {
           type: 'button',
           text: { type: 'plain_text', text: '발급' },
-          style: recommended.isLong ? 'default' : 'primary',
+          ...(recommended.isLong ? {} : { style: 'primary' }),
           action_id: `approve_short_${reqId}`,
           value: reqId,
         },
@@ -86,7 +86,7 @@ app.command('/parking', async ({ command, ack, respond }) => {
         elements: [1, 2, 3, 4, 5].map(n => ({
           type: 'button',
           text: { type: 'plain_text', text: `${n}시간` },
-          style: recommended.isLong ? 'primary' : 'default',
+          ...(recommended.isLong ? { style: 'primary' } : {}),
           action_id: `approve_long_${n}_${reqId}`,
           value: reqId,
         })),
