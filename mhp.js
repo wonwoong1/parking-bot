@@ -10,6 +10,7 @@ let _tokenExpiry = 0;
 async function getToken() {
   if (_token && Date.now() < _tokenExpiry) return _token;
   const res = await axios.post(`${BASE}/auth`, {
+    grant_type: 'password',
     account: process.env.MHP_EMAIL,
     password: process.env.MHP_PASSWORD,
   }, { headers: { actor: 'mhp.console' } });
