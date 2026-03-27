@@ -144,7 +144,7 @@ app.view('parking_request', async ({ ack, body, view, client }) => {
       },
       {
         type: 'actions',
-        elements: [1, 2, 3, 4, 5].map(n => ({
+        elements: [2, 3, 4, 5].map(n => ({
           type: 'button',
           text: { type: 'plain_text', text: `${n}시간` },
           ...(recommended.isLong ? { style: 'primary' } : {}),
@@ -175,7 +175,6 @@ async function handleApprove(body, ack, itemType, count) {
     });
     return;
   }
-  pending.delete(reqId);
 
   const discountItemId = itemType === 'short'
     ? process.env.MHP_DISCOUNT_ITEM_SHORT
