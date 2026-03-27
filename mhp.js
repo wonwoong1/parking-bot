@@ -51,6 +51,17 @@ async function applyDiscount(inId, inOrderId, discountItemId, applyCount = 1) {
     { inId, inOrderId, applyCount, memo: '' },
     { headers: headers(token) }
   );
+  console.log('[MHP] applyDiscount response:', JSON.stringify(res.data));
+  return res.data;
+}
+
+async function cancelDiscount(recordId, inId, inOrderId) {
+  const token = await getToken();
+  const res = await axios.put(
+    `${BASE}/stores.discountItems.cancel/${SITE}/${recordId}`,
+    null,
+    { headers: headers(token), params: { inId, inOrderId } }
+  );
   return res.data;
 }
 
@@ -63,4 +74,4 @@ function pickDiscountItem(inTimeMs) {
   }
 }
 
-module.exports = { searchVehicle, applyDiscount, pickDiscountItem };
+module.exports = { searchVehicle, applyDiscount, cancelDiscount, pickDiscountItem };

@@ -182,12 +182,33 @@ async function handleApprove(body, ack, itemType, count) {
   const itemName = itemType === 'short' ? '1시간 중복X(유료)' : `1시간 유료(중복) x${count}`;
 
   try {
-    await mhp.applyDiscount(req.inId, req.inOrderId, discountItemId, count);
+    const result = await mhp.applyDiscount(req.inId, req.inOrderId, discountItemId, count);
+    const recordId = result?.data?._id || result?.data?.id;
     const msg = `✅ *${req.plateNumber}* 주차권 발급 완료!\n• 권종: ${itemName}\n• 발급자: <@${actorId}>`;
+    const cancelValue = recordId ? `${recordId}|${req.inId}|${req.inOrderId}` : null;
     await app.client.chat.postMessage({
       channel: body.channel.id,
       thread_ts: body.message.ts,
       text: msg,
+      blocks: [
+        { type: 'section', text: { type: 'mrkdwn', text: msg } },
+        ...(cancelValue ? [{
+          type: 'actions',
+          elements: [{
+            type: 'button',
+            text: { type: 'plain_text', text: '↩️ 할인 취소' },
+            style: 'danger',
+            action_id: `cancel_discount_${Date.now()}`,
+            value: cancelValue,
+            confirm: {
+              title: { type: 'plain_text', text: '할인 취소 확인' },
+              text: { type: 'mrkdwn', text: `*${itemName}* 할인을 취소할까요?` },
+              confirm: { type: 'plain_text', text: '취소' },
+              deny: { type: 'plain_text', text: '닫기' },
+            },
+          }],
+        }] : []),
+      ],
     });
   } catch (e) {
     await app.client.chat.postMessage({
@@ -202,6 +223,26 @@ app.action(/^approve_short_/, async ({ body, ack }) => handleApprove(body, ack, 
 app.action(/^approve_long_(\d+)_/, async ({ body, ack, action }) => {
   const count = parseInt(action.action_id.split('_')[2]);
   await handleApprove(body, ack, 'long', count);
+});
+
+app.action(/^cancel_discount_/, async ({ body, ack }) => {
+  await ack();
+  const [recordId, inId, inOrderId] = body.actions[0].value.split('|');
+  try {
+    await mhp.cancelDiscount(recordId, inId, inOrderId);
+    await app.client.chat.update({
+      channel: body.channel.id,
+      ts: body.message.ts,
+      text: `↩️ 할인 취소됨 — <@${body.user.id}>`,
+      blocks: [{ type: 'section', text: { type: 'mrkdwn', text: `↩️ 할인 취소됨 — <@${body.user.id}>` } }],
+    });
+  } catch (e) {
+    await app.client.chat.postMessage({
+      channel: body.channel.id,
+      thread_ts: body.message.ts,
+      text: `❌ 취소 실패: ${e.response?.data?.resultMessage || e.message}`,
+    });
+  }
 });
 
 (async () => {
