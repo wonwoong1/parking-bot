@@ -59,8 +59,8 @@ async function cancelDiscount(recordId, inId, inOrderId) {
   const token = await getToken();
   const res = await axios.put(
     `${BASE}/stores.discountItems.cancel/${SITE}/${recordId}`,
-    null,
-    { headers: headers(token), params: { inId, inOrderId } }
+    {},
+    { headers: { ...headers(token), 'Content-Type': 'application/json' }, params: { inId, inOrderId } }
   );
   return res.data;
 }
