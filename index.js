@@ -183,7 +183,7 @@ async function handleApprove(body, ack, itemType, count) {
 
   try {
     const result = await mhp.applyDiscount(req.inId, req.inOrderId, discountItemId, count);
-    const recordId = result?.data?._id || result?.data?.id;
+    const recordId = result?.data?.discountItemUseId;
     const msg = `✅ *${req.plateNumber}* 주차권 발급 완료!\n• 권종: ${itemName}\n• 발급자: <@${actorId}>`;
     const cancelValue = recordId ? `${recordId}|${req.inId}|${req.inOrderId}` : null;
     await app.client.chat.postMessage({
