@@ -167,7 +167,14 @@ async function handleApprove(body, ack, itemType, count) {
   }
   const reqId = body.actions[0].value;
   const req = pending.get(reqId);
-  if (!req) return;
+  if (!req) {
+    await app.client.chat.postMessage({
+      channel: body.channel.id,
+      thread_ts: body.message.ts,
+      text: '❌ 요청 정보를 찾을 수 없습니다. (서버 재시작으로 인해 만료됨) 다시 요청해주세요.',
+    });
+    return;
+  }
   pending.delete(reqId);
 
   const discountItemId = itemType === 'short'
@@ -195,7 +202,7 @@ async function handleApprove(body, ack, itemType, count) {
 app.action(/^approve_short_/, async ({ body, ack }) => handleApprove(body, ack, 'short', 1));
 app.action(/^approve_long_(\d+)_/, async ({ body, ack, action }) => {
   const count = parseInt(action.action_id.split('_')[2]);
-  handleApprove(body, ack, 'long', count);
+  await handleApprove(body, ack, 'long', count);
 });
 
 (async () => {
