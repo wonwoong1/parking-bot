@@ -53,6 +53,21 @@ app.command('/주차권', async ({ command, ack, client }) => {
             placeholder: { type: 'plain_text', text: '작성해 주세요.' },
           },
         },
+        {
+          type: 'input',
+          block_id: 'hours_block',
+          optional: true,
+          label: { type: 'plain_text', text: '(옵션) 요청하시는 시간을 선택해주세요! 미선택시 기본 1시간으로 적용됩니다.' },
+          element: {
+            type: 'static_select',
+            action_id: 'hours_input',
+            placeholder: { type: 'plain_text', text: '시간 선택 (기본: 1시간)' },
+            options: [1, 2, 3, 4, 5].map(n => ({
+              text: { type: 'plain_text', text: `${n}시간` },
+              value: String(n),
+            })),
+          },
+        },
       ],
     },
   });
@@ -61,6 +76,8 @@ app.command('/주차권', async ({ command, ack, client }) => {
 app.view('parking_request', async ({ ack, body, view, client }) => {
   const plateInput = view.state.values.plate_block.plate_input.value.trim();
   const purpose = view.state.values.purpose_block.purpose_input.value.trim();
+  const hoursRaw = view.state.values.hours_block.hours_input.selected_option?.value;
+  const requestedHours = hoursRaw ? parseInt(hoursRaw) : 1;
   const { user_id, user_name } = JSON.parse(view.private_metadata);
 
   const plate4 = plateInput.replace(/\s/g, '').slice(-4);
@@ -90,18 +107,21 @@ app.view('parking_request', async ({ ack, body, view, client }) => {
   const mins = Math.floor((Date.now() - inTime) / 60000);
   const timeStr = `${Math.floor(mins / 60)}시간 ${mins % 60}분`;
   const inTimeStr = new Date(inTime).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul', hour: '2-digit', minute: '2-digit' });
-  const recommended = mhp.pickDiscountItem(inTime);
 
   const reqId = `${user_id}_${Date.now()}`;
   pending.set(reqId, {
     requesterId: user_id,
     requesterName: user_name,
     plateNumber: vehicle.plateNumber,
+    plate4,
     inId: vehicle._id || vehicle.inoutId,
     inOrderId: vehicle.inOrderId || vehicle.lastOrderId,
     inTime,
     purpose,
+    requestedHours,
   });
+
+  const itemType = requestedHours === 1 ? 'short' : 'long';
 
   await client.chat.postMessage({
     channel: process.env.SLACK_APPROVER_CHANNEL,
@@ -118,43 +138,20 @@ app.view('parking_request', async ({ ack, body, view, client }) => {
           { type: 'mrkdwn', text: `*용도*\n${purpose}` },
         ],
       },
-      {
-        type: 'section',
-        text: { type: 'mrkdwn', text: recommended.isLong ? '⚠️ *1시간 이상* 주차 → 유료(중복) 권장' : '✅ *1시간 미만* 주차 → 중복X 권장' },
-      },
       { type: 'divider' },
       {
         type: 'section',
-        text: { type: 'mrkdwn', text: `<!subteam^${APPROVER_GROUP}> 승인 요청드립니다.` },
-      },
-      {
-        type: 'section',
-        text: { type: 'mrkdwn', text: '*1시간 중복X(유료)* — 1시간 미만 주차 시' },
+        text: { type: 'mrkdwn', text: `<!subteam^${APPROVER_GROUP}> *${requestedHours}시간* 등록 요청드립니다.` },
         accessory: {
           type: 'button',
           text: { type: 'plain_text', text: '발급' },
-          ...(recommended.isLong ? {} : { style: 'primary' }),
-          action_id: `approve_short_${reqId}`,
+          style: 'primary',
+          action_id: `approve_${itemType}_${requestedHours}_${reqId}`,
           value: reqId,
         },
       },
-      {
-        type: 'section',
-        text: { type: 'mrkdwn', text: '*1시간 유료(중복)* — 시간 선택 후 발급:' },
-      },
-      {
-        type: 'actions',
-        elements: [2, 3, 4, 5].map(n => ({
-          type: 'button',
-          text: { type: 'plain_text', text: `${n}시간` },
-          ...(recommended.isLong ? { style: 'primary' } : {}),
-          action_id: `approve_long_${n}_${reqId}`,
-          value: reqId,
-        })),
-      },
     ],
   });
-
 });
 
 async function handleApprove(body, ack, itemType, count) {
@@ -173,6 +170,18 @@ async function handleApprove(body, ack, itemType, count) {
       thread_ts: body.message.ts,
       text: '❌ 요청 정보를 찾을 수 없습니다. (서버 재시작으로 인해 만료됨) 다시 요청해주세요.',
     });
+    return;
+  }
+
+  // 출차 여부 재확인
+  const still = await mhp.searchVehicle(req.plate4).catch(() => null);
+  if (!still) {
+    await app.client.chat.postMessage({
+      channel: body.channel.id,
+      thread_ts: body.message.ts,
+      text: `⚠️ *${req.plateNumber}* 차량이 이미 출차하였습니다. 주차권 발급이 취소됩니다.`,
+    });
+    pending.delete(reqId);
     return;
   }
 
@@ -219,10 +228,11 @@ async function handleApprove(body, ack, itemType, count) {
   }
 }
 
-app.action(/^approve_short_/, async ({ body, ack }) => handleApprove(body, ack, 'short', 1));
-app.action(/^approve_long_(\d+)_/, async ({ body, ack, action }) => {
-  const count = parseInt(action.action_id.split('_')[2]);
-  await handleApprove(body, ack, 'long', count);
+app.action(/^approve_(short|long)_\d+_/, async ({ body, ack, action }) => {
+  const parts = action.action_id.split('_');
+  const itemType = parts[1];
+  const count = parseInt(parts[2]);
+  await handleApprove(body, ack, itemType, count);
 });
 
 app.action(/^cancel_discount_/, async ({ body, ack }) => {
