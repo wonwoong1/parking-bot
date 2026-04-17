@@ -72,11 +72,6 @@ async function openParkingModal(triggerId, userId, userName, client) {
   });
 }
 
-app.command('/주차권', async ({ command, ack, client }) => {
-  await ack();
-  await openParkingModal(command.trigger_id, command.user_id, command.user_name, client);
-});
-
 app.shortcut('open_parking_modal', async ({ shortcut, ack, client }) => {
   await ack();
   await openParkingModal(shortcut.trigger_id, shortcut.user.id, shortcut.user.username, client);
