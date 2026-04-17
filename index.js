@@ -121,8 +121,6 @@ app.view('parking_request', async ({ ack, body, view, client }) => {
     requestedHours,
   });
 
-  const itemType = requestedHours === 1 ? 'short' : 'long';
-
   await client.chat.postMessage({
     channel: process.env.SLACK_APPROVER_CHANNEL,
     text: `🚗 주차권 발급 요청 - ${vehicle.plateNumber}`,
@@ -142,13 +140,29 @@ app.view('parking_request', async ({ ack, body, view, client }) => {
       {
         type: 'section',
         text: { type: 'mrkdwn', text: `<!subteam^${APPROVER_GROUP}> *${requestedHours}시간* 등록 요청드립니다.` },
+      },
+      {
+        type: 'section',
+        text: { type: 'mrkdwn', text: '*1시간 중복X(유료)* — 1시간 미만 주차 시' },
         accessory: {
           type: 'button',
           text: { type: 'plain_text', text: '발급' },
-          style: 'primary',
-          action_id: `approve_${itemType}_${requestedHours}_${reqId}`,
+          action_id: `approve_short_1_${reqId}`,
           value: reqId,
         },
+      },
+      {
+        type: 'section',
+        text: { type: 'mrkdwn', text: '*1시간 유료(중복)* — 시간 선택 후 발급:' },
+      },
+      {
+        type: 'actions',
+        elements: [2, 3, 4, 5].map(n => ({
+          type: 'button',
+          text: { type: 'plain_text', text: `${n}시간` },
+          action_id: `approve_long_${n}_${reqId}`,
+          value: reqId,
+        })),
       },
     ],
   });
