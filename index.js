@@ -20,17 +20,16 @@ async function getApprovers() {
   }
 }
 
-app.command('/주차권', async ({ command, ack, client }) => {
-  await ack();
+async function openParkingModal(triggerId, userId, userName, client) {
   await client.views.open({
-    trigger_id: command.trigger_id,
+    trigger_id: triggerId,
     view: {
       type: 'modal',
       callback_id: 'parking_request',
       title: { type: 'plain_text', text: '주차권 발급 요청' },
       submit: { type: 'plain_text', text: '제출' },
       close: { type: 'plain_text', text: '닫기' },
-      private_metadata: JSON.stringify({ user_id: command.user_id, user_name: command.user_name }),
+      private_metadata: JSON.stringify({ user_id: userId, user_name: userName }),
       blocks: [
         {
           type: 'input',
@@ -71,6 +70,16 @@ app.command('/주차권', async ({ command, ack, client }) => {
       ],
     },
   });
+}
+
+app.command('/주차권', async ({ command, ack, client }) => {
+  await ack();
+  await openParkingModal(command.trigger_id, command.user_id, command.user_name, client);
+});
+
+app.shortcut('open_parking_modal', async ({ shortcut, ack, client }) => {
+  await ack();
+  await openParkingModal(shortcut.trigger_id, shortcut.user.id, shortcut.user.username, client);
 });
 
 app.view('parking_request', async ({ ack, body, view, client }) => {
